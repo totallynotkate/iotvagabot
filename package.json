@@ -12,6 +12,7 @@
   "dependencies": {
     "body-parser": "^1.18.1",
     "express": "^4.15.4",
-    "lodash": "^4.17.4"
+    "lodash": "^4.17.4",
+    "validate.js": "^0.11.1"
   }
 }

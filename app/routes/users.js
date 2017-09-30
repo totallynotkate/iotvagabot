@@ -1,4 +1,5 @@
-var _=require("lodash");
+var _ = require('lodash');
+var validate = require('validate.js');
 
 var users = require('../data/users');
 var accounts = require('../data/accounts');
@@ -13,27 +14,37 @@ function usersRoutes(app) {
             // или по айдишнику мы с пользователями работаем. сейчас по айдишнику, теоретически имена могут совпадать.
             // но это не особо удобно для клиента
             var user = req.body;
-            try {
-                var name = user.name;
-                if (typeof name !== "string") {
-                    res.status(400).send('User has no name');
-                    return;
-                }
-                users.push(Object.assign(user, {id: users.length + 1}))
-            } catch (e) {
-                console.log(e);
-                res.status(400).send('User should have a name');
+            var error = validate(user, constraints.postUser);
+            if (error) {
+                res.status(400).send({
+                    code: 400,
+                    message: 'invalid data',
+                    details: error
+                });
             }
-            res.send(users[user.name])
+            else {
+                users.push(Object.assign(user, {id: users.length + 1}));
+                res.send(users[user.name])
+            }
         });
 
     app.route('/users/:id')
         .get(function (req, res) {
-            var user = getUser(req.params.id);
-            if (_.isEmpty(user)) {
-                res.status(400).send('User not found');
-            } else {
-                res.json(user);
+            var error = validate(req.params, constraints.getUser);
+            if (error) {
+                res.status(400).send({
+                    code: 400,
+                    message: 'invalid data',
+                    details: error
+                });
+            }
+            else {
+                var user = getUser(req.params.id);
+                if (_.isEmpty(user)) {
+                    res.status(400).send('User not found');
+                } else {
+                    res.json(user);
+                }
             }
         })
         .patch(function (req, res) {
@@ -88,4 +99,25 @@ function _getUser(id) {
     })
 }
 
-module.exports=usersRoutes;
+var constraints = {
+    postUser: {
+        name: {
+            presence: true,
+            format: {pattern: "[a-Zа-ЯёЁ]+"}
+        },
+        accountId: {
+            numericality: {
+                onlyInteger: true
+            }
+        }
+    },
+    getUser: {
+        id: {
+            numericality: {
+                onlyInteger: true
+            }
+        }
+    }
+};
+
+module.exports = usersRoutes;
