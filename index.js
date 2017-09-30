@@ -37,6 +37,8 @@ var accounts = [
     }
 ];
 
+var games = [];
+
 app.route('/users')
     .get(function (req, res) {
         res.send(JSON.stringify(users))
@@ -152,6 +154,15 @@ app.route('/accounts/:id')
             account.balance =+ sum.balance;
             res.json(account);
         }
+    });
+
+app.route('/game')
+    .get(function (req, res) {
+        res.send(games);
+    })
+    .post(function (req, res) {
+            games.push(req.body);
+            res.send(games);
     });
 
 var getAccount = _.memoize(_getAccount);
