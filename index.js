@@ -8,7 +8,7 @@ var users = [
     {
         name: "admin",
         id: 1,
-        accountId: null,
+        accountId: null,  //потому что у нескольких пользователей может быть один счет
     },
     {
         name: "vasya",
@@ -96,10 +96,19 @@ app.route('/users/:id/balance')
         if (user.accountId === null){
             req.status(400).send('User does not have an account')
         }
+        next()
     })
     .get(function (req, res) {
         var user = getUser(req.params.id);
         res.send(accounts[user.accountId].balance);
+    })
+    .post(function (req, res) {
+        var user = getUser(req.params.id);
+        var sum = req.body;
+        if(_.isEmpty(sum)){
+            res.status(400).send('Sum can not be null');
+        }
+        accounts[user.accountId] =+ sum;
     });
 
 app.route('/accounts')
@@ -126,7 +135,7 @@ app.route('/accounts/:id')
     .get(function (req, res) {
         res.json(getAccount(req.params.id));
     })
-    .put(function (req, res) { //todo выяснить про числа в js
+    .put(function (req, res) {
         var sum = req.body;
         if (_.isEmpty(sum)){
             res.status(400).send('You should send a change to the balance')
@@ -141,7 +150,7 @@ var getAccount = _.memoize(_getAccount);
 
 function _getAccount(id) {
     return _.find(accounts, function (account) {
-        return account.id === id;
+        return account.id === Number(id);
     })
 }
 
@@ -149,7 +158,7 @@ var getUser = _.memoize(_getUser);
 
 function _getUser(id) {
     return _.find(users, function (user) {
-        return user.id === id;
+        return user.id === Number(id);
     })
 }
 
