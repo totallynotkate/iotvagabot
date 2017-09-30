@@ -124,6 +124,14 @@ app.route('/accounts')
         res.json(accounts[id - 1])
     });
 
+app.route('/accounts/sum')
+    .get(function (req, res) {
+        var sum = _.reduce(accounts, function (result, account){
+            return result += account.balance;
+        }, 0);
+        res.send(sum.toString())
+    });
+
 app.route('/accounts/:id')
     .all(function (req, res, next) {
         var account = getAccount(req.params.id);
