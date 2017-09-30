@@ -1,25 +1,38 @@
-var accounts = require('../data/accounts');
+var Account = require('../data/accounts');
 var _ = require('lodash');
 
 //todo список балансов
 function accountRoutes(app) {
     app.route('/accounts')
         .get(function (req, res) {
-            res.json(accounts)
+            Account.find().lean().exec(function (err, accounts) {
+                if (err) {
+                    res.status(500);
+                    return;
+                }
+                res.json(accounts)
+            });
         })
         .post(function (req, res) {
-            var id = accounts.length + 1;
-            accounts.push({
-                balance: 0,
-                id: id
-            });
-            res.json(accounts[id - 1])
+            var account = new Account();
+            account.save(function (err) {
+                if (err) {
+                    res.status(500);
+                    return;
+                }
+                res.send(account);
+            })
         });
 
     app.route('/accounts/sum')
         .get(function (req, res) {
-            var sum = _.sumBy(accounts, 'balance');
-            res.send(sum.toString())
+            Account.find().select('balance').exec(function (err, balances) {
+                if (err){
+                    res.status(500);
+                    return;
+                }
+                res.send(_.sumBy(balances, 'balance').toString());
+            });
         });
 
     app.route('/accounts/:id')
@@ -53,4 +66,4 @@ function _getAccount(id) {
     })
 }
 
-module.exports=accountRoutes;
+module.exports = accountRoutes;

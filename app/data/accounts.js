@@ -1,14 +1,14 @@
-module.exports=[
-    {
-        balance: 0,
-        id: 1
-    },
-    {
-        balance: 0,
-        id: 2
-    },
-    {
-        balance: 0,
-        id: 3
+var mongoose = require('mongoose');
+
+var Schema = mongoose.Schema;
+
+var accountSchema = new Schema({
+    balance: {
+        type: Number,
+        default: 0
     }
-];
+});
+
+var accountsModel = mongoose.model('accountsModel', accountSchema);
+
+module.exports = accountsModel;

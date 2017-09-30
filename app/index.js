@@ -1,6 +1,9 @@
 var app = require('express')();
 var bodyParser = require('body-parser');
 var _ = require('lodash');
+var mongoose = require('mongoose');
+
+mongoose.connect('mongodb://localhost:27017');
 
 app.use(bodyParser.json());
 require('./routes/users')(app);
