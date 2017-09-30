@@ -94,13 +94,13 @@ app.route('/users/:id/balance')
             res.status(400).send('User not found');
         }
         if (user.accountId === null){
-            req.status(400).send('User does not have an account')
+            res.status(400).send('User does not have an account')
         }
-        next()
+        next() //todo с этой штукой функция продолжает выполняться, в консоли ошибки. Без нее - не переходит к get/post
     })
     .get(function (req, res) {
         var user = getUser(req.params.id);
-        res.send(accounts[user.accountId].balance);
+        res.send(accounts[user.accountId].balance.toString());
     })
     .post(function (req, res) {
         var user = getUser(req.params.id);
