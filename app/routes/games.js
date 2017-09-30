@@ -1,5 +1,7 @@
 var games = require('../data/games');
-var _ = require('lodash')
+var users = require('../data/users');
+var accounts = require('../data/accounts');
+var _ = require('lodash');
 
 function gameRoutes(app) {
     app.route('/games')
@@ -10,8 +12,12 @@ function gameRoutes(app) {
             res.send(_.filter(games, _.omitBy({calculated, totalPlayers}, _.isUndefined)));
         })
         .post(function (req, res) {
-            games.push(req.body);
-            res.send(games);
+            var calculated = JSON.parse(req.body.calculated);
+            if (calculated) {
+                calculateGame(req.body);
+            }
+            games.push(Object.assign({id: games.length + 1}, req.body)); //todo validate
+            res.send(games[games.length - 1]);
         });
 }
 
@@ -24,5 +30,19 @@ function gameRoutes(app) {
     "name": string
 }
  */
+
+function calculatePerson(game) {
+    var {totalPlayers, price} = game;
+    return price / totalPlayers;
+}
+
+function calculateGame(game) {
+    var price = calculatePerson(game);
+    var teamPlayers = game.teamPlayers;
+    _.forEach(teamPlayers, function (id) {
+        var user = _.find(users, {id});
+        _.find(accounts, {id: user.accountId}).balance -= price;
+    })
+}
 
 module.exports = gameRoutes;

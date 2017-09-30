@@ -1,6 +1,7 @@
 var accounts = require('../data/accounts');
 var _ = require('lodash');
 
+//todo список балансов
 function accountRoutes(app) {
     app.route('/accounts')
         .get(function (req, res) {

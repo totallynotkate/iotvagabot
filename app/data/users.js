@@ -2,16 +2,16 @@ module.exports = [
     {
         name: "admin",
         id: 1,
-        accountId: null,  //потому что у нескольких пользователей может быть один счет
+        accountId: 1,  //потому что у нескольких пользователей может быть один счет
     },
     {
         name: "vasya",
         id: 2,
-        accountId: null,
+        accountId: 1,
     },
     {
         name: "petya",
         id: 3,
-        accountId: null,
+        accountId: 2,
     }
 ];
