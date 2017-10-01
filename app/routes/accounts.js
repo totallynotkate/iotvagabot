@@ -1,5 +1,6 @@
 var Account = require('../data/accounts');
 var _ = require('lodash');
+var validate = require('validate.js');
 
 //todo список балансов
 function accountRoutes(app) {
@@ -27,7 +28,7 @@ function accountRoutes(app) {
     app.route('/accounts/sum')
         .get(function (req, res) {
             Account.find().select('balance').exec(function (err, balances) {
-                if (err){
+                if (err) {
                     res.status(500);
                     return;
                 }
@@ -36,34 +37,65 @@ function accountRoutes(app) {
         });
 
     app.route('/accounts/:id')
-        .all(function (req, res, next) {
-            var account = getAccount(req.params.id);
-            if (_.isEmpty(account)) {
-                res.status(400).send('Account not found');
-            }
-            next()
-        })
         .get(function (req, res) {
-            res.json(getAccount(req.params.id));
+            Account.findById(req.params.id, function (err, account) {
+                console.log(account);
+                if (err) {
+                    res.status(500).send(err);
+                    return;
+                }
+                account ? res.send(account) : res.status(400).send({message: 'Account not found'});
+            });
         })
-        .put(function (req, res) {
-            var sum = req.body;
-            if (_.isEmpty(sum)) {
-                res.status(400).send('You should send a change to the balance')
-            } else {
-                var account = getAccount(req.params.id);
-                account.balance = +sum.balance;
-                res.json(account);
+        .patch(function (req, res) {
+            var err = validate(req.body, constraints.patchAccount);
+            if (err) {
+                res.status(400).send({
+                    code: 400,
+                    type: 'validation error',
+                    message: 'invalid data',
+                    details: err
+                });
+                return;
             }
+
+            var delta = req.body.sum;
+            Account.findById(req.params.id, function (err, account) {
+                console.log(account);
+                if (err) {
+                    res.status(500).send(err);
+                    return;
+                }
+                if (!account) {
+                    res.status(400).send({
+                        code: 400,
+                        message: 'Account not found'
+                    });
+                    return;
+                }
+                account.balance = account.balance + delta;
+                account.save(function (err) {
+                    if (err) {
+                        res.status(500)
+                            .send({error: err});
+                        return;
+                    }
+                    res.send(account);
+                })
+            });
         });
 }
 
-var getAccount = _.memoize(_getAccount);
-
-function _getAccount(id) {
-    return _.find(accounts, function (account) {
-        return account.id === Number(id);
-    })
-}
+var constraints = {
+    patchAccount: {
+        sum: {
+            presence: true,
+            numericality: {
+                onlyInteger: true,
+                greaterThan: 0
+            }
+        }
+    }
+};
 
 module.exports = accountRoutes;
