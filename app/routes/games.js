@@ -1,48 +1,62 @@
-var games = require('../data/games');
-var users = require('../data/users');
-var accounts = require('../data/accounts');
+var Game = require('../data/games');
+var User = require('../data/users');
 var _ = require('lodash');
 
 function gameRoutes(app) {
     app.route('/games')
         .get(function (req, res) {
-            var {calculated, totalPlayers} = req.query;
-            calculated = calculated !== undefined ? JSON.parse(calculated) : undefined;
-            totalPlayers = totalPlayers !== undefined ? JSON.parse(totalPlayers) : undefined;
-            res.send(_.filter(games, _.omitBy({calculated, totalPlayers}, _.isUndefined)));
+            var {calculated, totalPlayers, from, to} = req.query;
+            var params = _.omitBy({calculated, totalPlayers}, _.isUndefined);
+
+            from && _.set(params, 'date.$gt', from);
+            to && _.set(params, 'date.$lt', to);
+
+            Game
+                .find(params)
+                .exec()
+                .then(function (games) {
+                    res.send(games)
+                })
+                .catch(function (err) {
+                    res.status(500).send(err);
+                })
         })
         .post(function (req, res) {
-            var calculated = JSON.parse(req.body.calculated);
-            if (calculated) {
-                calculateGame(req.body);
+            var game = new Game(req.body);
+            if (game.calculated) {
+                var price = game.price / game.totalPlayers;
+                User
+                    .find({_id: {$in: game.teamPlayers}})
+                    .populate('account')
+                    .then(function (users) {
+                        var savePromises = users.map(function (user) {
+                            user.account.balance -= price;
+                            return user.account.save();
+                        });
+                        return Promise.all(savePromises);
+                    })
+                    .then(function () {
+                        return game.save();
+                    })
+                    .then(function (game) {
+                        res.send(game)
+                    })
+                    .catch(function (err) {
+                        res.status(500).send(err);
+                    });
             }
-            games.push(Object.assign({id: games.length + 1}, req.body)); //todo validate
-            res.send(games[games.length - 1]);
+            else {
+                game.save()
+                    .then(function (game) {
+                        res.send(game)
+                    })
+                    .catch(function (err) {
+                        res.status(500).send(err)
+                    });
+            }
         });
 }
 
-/**
- game = {
-    "totalPlayers": int,
-    "teamPlayers": [ids],
-    "calculated": bool,
-    "price": int,
-    "name": string
-}
- */
-
-function calculatePerson(game) {
-    var {totalPlayers, price} = game;
-    return price / totalPlayers;
-}
-
-function calculateGame(game) {
-    var price = calculatePerson(game);
-    var teamPlayers = game.teamPlayers;
-    _.forEach(teamPlayers, function (id) {
-        var user = _.find(users, {id});
-        _.find(accounts, {id: user.accountId}).balance -= price;
-    })
-}
+//todo patch game: calculated: false <-> true
 
 module.exports = gameRoutes;
