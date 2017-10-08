@@ -3,7 +3,7 @@ var bodyParser = require('body-parser');
 var _ = require('lodash');
 var mongoose = require('mongoose');
 
-mongoose.connect('mongodb://localhost:27017');
+mongoose.connect('mongodb://mongo:27017');
 
 app.use(bodyParser.json());
 require('./routes/users')(app);
