@@ -24,39 +24,84 @@ function gameRoutes(app) {
         .post(function (req, res) {
             var game = new Game(req.body);
             if (game.calculated) {
-                var price = game.price / game.totalPlayers;
-                User
-                    .find({_id: {$in: game.teamPlayers}})
-                    .populate('account')
-                    .then(function (users) {
-                        var savePromises = users.map(function (user) {
-                            user.account.balance -= price;
-                            return user.account.save();
-                        });
-                        return Promise.all(savePromises);
-                    })
-                    .then(function () {
-                        return game.save();
-                    })
-                    .then(function (game) {
-                        res.send(game)
-                    })
-                    .catch(function (err) {
-                        res.status(500).send(err);
-                    });
+                calculateAndSaveGame(game, res);
             }
             else {
-                game.save()
-                    .then(function (game) {
-                        res.send(game)
-                    })
-                    .catch(function (err) {
-                        res.status(500).send(err)
-                    });
+                saveGame(game, res);
             }
+        });
+
+    app.route('/games/:id')
+        .get(function (req, res) {
+            Game
+                .findById(req.params.id)
+                .then(function (game) {
+                    if (_.isEmpty(game)) {
+                        throw new Error(`Game ${req.params.id} not found`)
+                    }
+                    res.send(game);
+                })
+                .catch(function (err) {
+                    res.status(400).send(err.message);
+                })
+        })
+        .patch(function (req, res) {
+            Game
+                .findById(req.params.id)
+                .then(function (game) {
+                    if (_.isEmpty(game)) {
+                        res.status(400).send('Invalid id');
+                        return;
+                    }
+                    var shouldCalculate = game.calculated !== req.body.calculated;
+
+                    _.assign(game, req.body);
+
+                    if (shouldCalculate) {
+                        var multiplier = req.body.calculated ? -1 : 1;
+                        calculateAndSaveGame(game, res, multiplier);
+                    } else {
+                        saveGame(game, res);
+                    }
+                })
+                .catch(function (err) {
+                    res.status(500).send(err);
+                });
         });
 }
 
-//todo patch game: calculated: false <-> true
+
+function saveGame(game, res) {
+    game.save()
+        .then(function (game) {
+            res.send(game)
+        })
+        .catch(function (err) {
+            res.status(500).send(err)
+        });
+}
+
+function calculateAndSaveGame(game, res, multiplier = -1) {
+    var price = game.price / game.totalPlayers;
+    User
+        .find({_id: {$in: game.teamPlayers}})
+        .populate('account')
+        .then(function (users) {
+            var savePromises = users.map(function (user) {
+                user.account.balance += price * multiplier;
+                return user.account.save();
+            });
+            return Promise.all(savePromises);
+        })
+        .then(function () {
+            return game.save();
+        })
+        .then(function (game) {
+            res.send(game)
+        })
+        .catch(function (err) {
+            res.status(500).send(err);
+        });
+}
 
 module.exports = gameRoutes;
